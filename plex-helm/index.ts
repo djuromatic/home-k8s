@@ -48,6 +48,14 @@ const ingressController = new kubernetes.helm.v3.Release("plex", {
       annotations: {
         "cert-manager.io/cluster-issuer": "lets-encrypt"
       },
+      tls: [
+        {
+          hosts: [
+            "plex.dmatic.xyz"
+          ],
+          secretName: "plex-tls-secret",
+        }
+      ],
       hosts: [
         {
           host: "plex.dmatic.xyz",
