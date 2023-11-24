@@ -1,0 +1,3 @@
+config:
+  plex-helm:domain: plex.dmatic.xyz
+  plex-helm:namespace: plex
