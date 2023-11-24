@@ -35,7 +35,7 @@ const ingress = new k8s.networking.v1.Ingress("plex-ingress", {
         http: {
           paths: [
             {
-              path: "/web",
+              path: "/",
               pathType: "Prefix",
               backend: {
                 service: {
