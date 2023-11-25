@@ -2,7 +2,7 @@ import * as pulumi from "@pulumi/pulumi";
 import * as kubernetes from "@pulumi/kubernetes";
 
 const config = new pulumi.Config();
-const k8sNamespace = config.require("k8sNamespace");
+const kubernetesNamespace = config.require("kubernetesNamespace");
 const appLabels = {
   app: "plex",
 };
@@ -11,7 +11,7 @@ const appLabels = {
 const ingressNs = new kubernetes.core.v1.Namespace("plexns", {
   metadata: {
     labels: appLabels,
-    name: k8sNamespace,
+    name: kubernetesNamespace,
   }
 });
 
@@ -93,5 +93,150 @@ const ingressController = new kubernetes.helm.v3.Release("plex", {
   },
 });
 
+
+// Deployments and Services
+const qbittorrent = new kubernetes.apps.v1.Deployment(
+  "qbittorrent",
+  {
+    metadata: {
+      name: "qbittorrent",
+      namespace: kubernetesNamespace,
+    },
+    spec: {
+      replicas: 1,
+      selector: {
+        matchLabels: {
+          app: "qbittorrent",
+        },
+      },
+      template: {
+        metadata: {
+          labels: {
+            app: "qbittorrent",
+          },
+        },
+        spec: {
+          containers: [
+            {
+              name: "qbittorrent",
+              image: "lscr.io/linuxserver/qbittorrent:latest",
+              ports: [
+                {
+                  containerPort: 8080,
+                },
+                {
+                  containerPort: 6881,
+                  protocol: "TCP",
+                },
+                {
+                  containerPort: 6881,
+                  protocol: "UDP",
+                },
+              ],
+              env: [
+                {
+                  name: "PUID",
+                  value: "1000",
+                },
+                {
+                  name: "PGID",
+                  value: "1000",
+                },
+                {
+                  name: "TZ",
+                  value: "Etc/UTC",
+                },
+                {
+                  name: "WEBUI_PORT",
+                  value: "8080",
+                },
+              ],
+              volumeMounts: [
+                {
+                  name: "config",
+                  mountPath: "/config",
+                },
+                {
+                  name: "plex-data",
+                  mountPath: "/plex-data", // Mount the PVC at this path
+                },
+              ],
+            },
+          ],
+        },
+      },
+    },
+  },
+);
+
+const service = new kubernetes.core.v1.Service(
+  "qbittorrent-service",
+  {
+    metadata: {
+      name: "qbittorrent-service",
+      namespace: kubernetesNamespace,
+    },
+    spec: {
+      selector: qbittorrent.spec.template.metadata.labels,
+      ports: [
+        {
+          port: 8080,
+          targetPort: 8080,
+        },
+        {
+          port: 6881,
+          targetPort: 6881,
+        },
+        {
+          port: 6881,
+          targetPort: 6881,
+          protocol: "UDP",
+        },
+      ],
+    },
+  },
+);
+
+const ingress = new kubernetes.networking.v1.Ingress(
+  "qbittorrent-ingress",
+  {
+    metadata: {
+      name: "qbittorrent-ingress",
+      namespace: kubernetesNamespace,
+      annotations: {
+        "cert-manager.io/cluster-issuer": "lets-encrypt"
+      },
+    },
+    spec: {
+      rules: [
+        {
+          host: "qb.dmatic.xyz", // Update with your domain
+          http: {
+            paths: [
+              {
+                path: "/",
+                pathType: "Prefix",
+                backend: {
+                  service: {
+                    name: service.metadata.name,
+                    port: {
+                      number: 8080,
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+      tls: [
+        {
+          hosts: ["qb.dmatic.xyz"], // Update with your domain
+          secretName: "qb-tls-secret",
+        },
+      ],
+    },
+  },
+);
 // Export some values for use elsewhere
 export const name = ingressController.name;
