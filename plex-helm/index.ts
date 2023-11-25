@@ -93,6 +93,23 @@ const ingressController = new kubernetes.helm.v3.Release("plex", {
   },
 });
 
+const pvcQBitConfig = new kubernetes.core.v1.PersistentVolumeClaim("qbit-config-pvc", {
+  metadata: {
+    name: "qbit-config-pvc",
+    namespace: ingressNs.metadata.name,
+    annotations: {
+      "pulumi.com/skipAwait": "true" // don't use the await logic at all
+    }
+  },
+  spec: {
+    accessModes: ["ReadWriteOnce"],
+    resources: {
+      requests: {
+        storage: "2Gi"
+      },
+    },
+  },
+});
 
 // Deployments and Services
 const qbittorrent = new kubernetes.apps.v1.Deployment(
@@ -153,12 +170,11 @@ const qbittorrent = new kubernetes.apps.v1.Deployment(
               ],
               volumeMounts: [
                 {
-                  name: "config",
-                  mountPath: "/config",
+                  name: pvcQBitConfig.metadata.name, mountPath: "/config",
                 },
                 {
-                  name: "plex-data",
-                  mountPath: "/plex-data", // Mount the PVC at this path
+                  name: pvc.metadata.name,
+                  mountPath: "/data", // Mount the PVC at this path
                 },
               ],
             },
@@ -168,6 +184,7 @@ const qbittorrent = new kubernetes.apps.v1.Deployment(
     },
   },
 );
+
 
 const service = new kubernetes.core.v1.Service(
   "qbittorrent-service",
