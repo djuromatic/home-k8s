@@ -210,6 +210,7 @@ const service = new kubernetes.core.v1.Service(
     },
     spec: {
       selector: qbittorrent.spec.template.metadata.labels,
+      type: "NodePort",
       ports: [
         {
           name: "http-qbit",
