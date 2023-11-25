@@ -212,14 +212,17 @@ const service = new kubernetes.core.v1.Service(
       selector: qbittorrent.spec.template.metadata.labels,
       ports: [
         {
+          name: "http-qbit",
           port: 8080,
           targetPort: 8080,
         },
         {
+          name: "tcp-qbit",
           port: 6881,
           targetPort: 6881,
         },
         {
+          name: "udp-qbit",
           port: 6881,
           targetPort: 6881,
           protocol: "UDP",
