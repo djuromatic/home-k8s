@@ -168,14 +168,16 @@ const qbittorrent = new kubernetes.apps.v1.Deployment(
                   value: "8080",
                 },
               ],
-              volumeMounts: [
+              volumeDevices: [
                 {
-                  name: pvcQBitConfig.metadata.name, mountPath: "/config",
+                  name: pvcQBitConfig.metadata.name,
+                  devicePath: "/config"
+
                 },
                 {
                   name: pvc.metadata.name,
-                  mountPath: "/data", // Mount the PVC at this path
-                },
+                  devicePath: "/downloads"
+                }
               ],
             },
           ],
