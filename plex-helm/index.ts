@@ -133,6 +133,20 @@ const qbittorrent = new kubernetes.apps.v1.Deployment(
           },
         },
         spec: {
+          volumes: [
+            {
+              name: "config-storage",
+              persistentVolumeClaim: {
+                claimName: pvcQBitConfig.metadata.name
+              }
+            },
+            {
+              name: "download-storage",
+              persistentVolumeClaim: {
+                claimName: pvc.metadata.name
+              }
+            }
+          ],
           containers: [
             {
               name: "qbittorrent",
@@ -168,17 +182,16 @@ const qbittorrent = new kubernetes.apps.v1.Deployment(
                   value: "8080",
                 },
               ],
-              volumeDevices: [
+              volumeMounts: [
                 {
-                  name: pvcQBitConfig.metadata.name,
-                  devicePath: "/config"
-
+                  mountPath: "/config",
+                  name: "config-storage"
                 },
                 {
-                  name: pvc.metadata.name,
-                  devicePath: "/downloads"
+                  mountPath: "/downloads",
+                  name: "download-storage"
                 }
-              ],
+              ]
             },
           ],
         },
